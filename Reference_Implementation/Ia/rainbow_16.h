@@ -64,8 +64,6 @@ void rainbow_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t *
 
 void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key * sk , const uint8_t * w );
 
-void rainbow_genkey_debug( rainbow_key * pk , rainbow_key * sk );
-
 #endif
 
 

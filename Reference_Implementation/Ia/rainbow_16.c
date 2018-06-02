@@ -22,8 +22,6 @@ static void rainbow_central_map( uint8_t * r , const rainbow_ckey * k , const ui
 
 static void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key * sk , const uint8_t * w );
 
-static void rainbow_genkey_debug( rainbow_key * pk , rainbow_key * sk );
-
 #endif
 
 
@@ -46,28 +44,6 @@ void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key * sk , const uint8_t
 }
 
 
-#ifndef _DEBUG_RAINBOW_
-static
-#endif
-void rainbow_genkey_debug( rainbow_key * pk , rainbow_key * sk )
-{
-	gf256v_rand( (uint8_t *)&sk->ckey , sizeof(rainbow_ckey) );
-	memcpy( (uint8_t *)&pk->ckey , (uint8_t *)&sk->ckey , sizeof(rainbow_ckey) );
-
-	gf16mat_rand_inv( pk->mat_t , sk->mat_t , _PUB_N );
-	gf16mat_rand_inv( pk->mat_s , sk->mat_s , _PUB_M );
-
-	gf256v_rand( pk->vec_t , _PUB_N_BYTE );
-	memcpy( sk->vec_t , pk->vec_t , _PUB_N_BYTE );
-	//gf16mat_prod( sk->vec_t , sk->mat_t , _PUB_N_BYTE , _PUB_N , pk->vec_t );
-
-	gf256v_rand( pk->vec_s , _PUB_M_BYTE );
-	memcpy( sk->vec_s , pk->vec_s , _PUB_M_BYTE );
-	//gf16mat_prod( sk->vec_s , sk->mat_s , _PUB_M_BYTE , _PUB_M , pk->vec_s );
-
-}
-
-
 
 static inline
 void rainbow_pubmap_wrapper( void * z, const void* pk_key, const void * w) {
@@ -80,7 +56,21 @@ void rainbow_genkey( uint8_t * pk , uint8_t * sk )
 
 	rainbow_key _pk;
 	rainbow_key _sk;
-	rainbow_genkey_debug( &_pk , &_sk );
+
+	gf256v_rand( (uint8_t *)&_sk.ckey , sizeof(rainbow_ckey) );
+	memcpy( (uint8_t *)&_pk.ckey , (uint8_t *)&_sk.ckey , sizeof(rainbow_ckey) );
+
+	gf16mat_rand_inv( _pk.mat_t , _sk.mat_t , _PUB_N );
+	gf16mat_rand_inv( _pk.mat_s , _sk.mat_s , _PUB_M );
+
+	gf256v_rand( _pk.vec_t , _PUB_N_BYTE );
+	memcpy( _sk.vec_t , _pk.vec_t , _PUB_N_BYTE );
+	//gf16mat_prod( sk->vec_t , sk->mat_t , _PUB_N_BYTE , _PUB_N , pk->vec_t );
+
+	gf256v_rand( _pk.vec_s , _PUB_M_BYTE );
+	memcpy( _sk.vec_s , _pk.vec_s , _PUB_M_BYTE );
+	//gf16mat_prod( sk->vec_s , sk->mat_s , _PUB_M_BYTE , _PUB_M , pk->vec_s );
+
 	memcpy( sk , (uint8_t*)(&_sk) , sizeof(rainbow_key) );
 
 	mpkc_interpolate_gf16( pk , rainbow_pubmap_wrapper , (const void*) &_pk );
