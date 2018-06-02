@@ -52,8 +52,6 @@ void rainbow_genkey( uint8_t * pk , uint8_t * sk );
 
 #define rainbow_pubmap mpkc_pub_map_gf16
 
-unsigned rainbow_secmap( uint8_t * w , const rainbow_key * sk , const uint8_t * z );
-
 
 //#define _DEBUG_MPKC_
 
@@ -62,8 +60,6 @@ unsigned rainbow_secmap( uint8_t * w , const rainbow_key * sk , const uint8_t * 
 #ifdef _DEBUG_RAINBOW_
 
 /// algorithm 1
-unsigned rainbow_ivs_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t * a );
-
 void rainbow_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t * a );
 
 void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key * sk , const uint8_t * w );

@@ -18,8 +18,6 @@
 
 #ifndef _DEBUG_RAINBOW_
 
-static unsigned rainbow_ivs_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t * a );
-
 static void rainbow_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t * a );
 
 static void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key * sk , const uint8_t * w );
@@ -89,38 +87,6 @@ void rainbow_genkey( uint8_t * pk , uint8_t * sk )
 
 	pk[_PUB_KEY_LEN-1] = _SALT_BYTE;
 	sk[_SEC_KEY_LEN-1] = _SALT_BYTE;
-}
-
-
-unsigned rainbow_secmap( uint8_t * w , const rainbow_key * sk , const uint8_t * z )
-{
-
-	//if( gf256v_is_zero(z,_PUB_M_BYTE) ) { memset(w,0,_PUB_N_BYTE); return 0; }
-
-	uint8_t _z[_PUB_M_BYTE] ;
-	uint8_t y[_PUB_N_BYTE] ;
-	uint8_t x[_PUB_N_BYTE] ;
-
-	memcpy( _z , z , _PUB_M_BYTE );
-	gf256v_add(_z,sk->vec_s,_PUB_M_BYTE);
-	gf16mat_prod(y,sk->mat_s,_PUB_M_BYTE,_PUB_M,_z);
-
-	unsigned succ = 0;
-	unsigned time = 0;
-	while( !succ ) {
-		if( 256 == time ) break;
-
-		gf256v_rand( x , _PUB_N_BYTE - _PUB_M_BYTE );
-
-		succ = rainbow_ivs_central_map( x , & sk->ckey , y );
-		time ++;
-	};
-
-	gf256v_add(x,sk->vec_t,_PUB_N_BYTE);
-	gf16mat_prod(w,sk->mat_t,_PUB_N_BYTE,_PUB_N,x);
-
-	if( succ ) return 0;
-	return time;
 }
 
 
@@ -228,33 +194,6 @@ unsigned linear_solver_l2( uint8_t * r , const uint8_t * mat_32x32 , const uint8
 		gf16v_set_ele( r , i , mat[i*(_O2_BYTE+1)+_O2_BYTE] );
 	}
 	return r8;
-}
-
-
-
-#ifndef _DEBUG_RAINBOW_
-static
-#endif
-unsigned rainbow_ivs_central_map( uint8_t * r , const rainbow_ckey * k , const uint8_t * a ) {
-#ifdef _DEBUG_MPKC_
-memcpy( r+_V1_BYTE , a , _PUB_M_BYTE );
-return 1;
-#endif
-	uint8_t mat1[_O1*_O1] ;
-	uint8_t temp[_O1_BYTE] ;
-	mpkc_pub_map_gf16_n_m( temp , k->l1_vv , r , _V1 , _O1 );
-	gf256v_add( temp  , a , _O1_BYTE );
-	gen_l1_mat( mat1 , k , r );
-	unsigned r1 = linear_solver_l1( r+_V1_BYTE , mat1 , temp );
-
-	uint8_t mat2[_O2*_O2] ;
-	uint8_t temp2[_O2_BYTE] ;
-	gen_l2_mat( mat2 , k , r );
-	mpkc_pub_map_gf16_n_m( temp2 , k->l2_vv , r , _V2 , _O2 );
-	gf256v_add( temp2  , a+_O1_BYTE , _O2_BYTE );
-	unsigned r2 = linear_solver_l2( r+_V2_BYTE , mat2 , temp2 );
-
-	return r1&r2;
 }
 
 
