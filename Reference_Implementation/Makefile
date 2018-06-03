@@ -21,7 +21,7 @@ SRCS_O_ND = $(subst $(PROJ_DIR)/,,$(SRCS_O))
 
 OBJ = $(SRCS_O_ND) utils.o
 
-EXE= PQCgenKAT_sign rainbow-genkey rainbow-sign rainbow-verify
+EXE= rainbow-genkey rainbow-sign rainbow-verify
 
 
 
@@ -77,4 +77,4 @@ tables:
 	cd supplement; make
 
 clean:
-	rm *.o *-test *-benchmark rainbow-genkey rainbow-sign rainbow-verify PQCgenKAT_sign;
+	rm -rf *.o *-test *-benchmark rainbow-genkey rainbow-sign rainbow-verify;

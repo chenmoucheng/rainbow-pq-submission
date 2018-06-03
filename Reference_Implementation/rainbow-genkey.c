@@ -36,7 +36,8 @@ int main( int argc , char ** argv )
 	uint8_t * qp_pk = (uint8_t*)malloc( CRYPTO_PUBLICKEYBYTES );
 	FILE * fp;
 
-	int r = crypto_sign_keypair( qp_pk, _sk );
+	uint8_t seed[_HASH_LEN] = {0};
+	int r = crypto_sign_keypair( kptr_wrap(seed, qp_pk, CRYPTO_PUBLICKEYBYTES), kptr_wrap(seed, _sk, CRYPTO_SECRETKEYBYTES) );
 	if( 0 != r ) {
 		printf("%s genkey fails.\n", CRYPTO_ALGNAME );
 		return -1;

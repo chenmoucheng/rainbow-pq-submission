@@ -9,7 +9,7 @@
 
 
 int
-crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
+crypto_sign_keypair(kptr_t pk, kptr_t sk)
 {
 	rainbow_genkey(pk, sk);
 	return 0;
@@ -20,7 +20,7 @@ crypto_sign_keypair(unsigned char *pk, unsigned char *sk)
 
 
 int
-crypto_sign(unsigned char *sm, unsigned long long *smlen, const unsigned char *m, unsigned long long mlen, const unsigned char *sk)
+crypto_sign(unsigned char *sm, unsigned long long *smlen, const unsigned char *m, unsigned long long mlen, kptr_t sk)
 {
 	unsigned char digest[_HASH_LEN];
 
@@ -37,7 +37,7 @@ crypto_sign(unsigned char *sm, unsigned long long *smlen, const unsigned char *m
 
 
 int
-crypto_sign_open(unsigned char *m, unsigned long long *mlen,const unsigned char *sm, unsigned long long smlen,const unsigned char *pk)
+crypto_sign_open(unsigned char *m, unsigned long long *mlen,const unsigned char *sm, unsigned long long smlen, kptr_t pk)
 {
 	if( _SIGNATURE_BYTE > smlen ) return -1;
 	memcpy( m , sm , smlen-_SIGNATURE_BYTE );

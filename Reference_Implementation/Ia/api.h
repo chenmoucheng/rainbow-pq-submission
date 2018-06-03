@@ -16,8 +16,11 @@
 #include "rainbow_16.h"
 
 
+#include "kptr.h"
+
+
 //  Set these three values apropriately for your algorithm
-#define CRYPTO_SECRETKEYBYTES _SEC_KEY_LEN
+#define CRYPTO_SECRETKEYBYTES sizeof(rainbow_key_kptr)
 #define CRYPTO_PUBLICKEYBYTES _PUB_KEY_LEN
 #define CRYPTO_BYTES _SIGNATURE_BYTE
 
@@ -25,16 +28,16 @@
 #define CRYPTO_ALGNAME _S_NAME
 
 int
-crypto_sign_keypair(unsigned char *pk, unsigned char *sk);
+crypto_sign_keypair(kptr_t pk, kptr_t sk);
 
 int
 crypto_sign(unsigned char *sm, unsigned long long *smlen,
             const unsigned char *m, unsigned long long mlen,
-            const unsigned char *sk);
+            kptr_t sk);
 
 int
 crypto_sign_open(unsigned char *m, unsigned long long *mlen,
                  const unsigned char *sm, unsigned long long smlen,
-                 const unsigned char *pk);
+                 kptr_t pk);
 
 #endif /* api_h */

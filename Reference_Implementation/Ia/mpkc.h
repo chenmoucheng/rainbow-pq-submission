@@ -10,6 +10,8 @@
 
 #include "rainbow_config.h"
 
+#include "kptr.h"
+
 #ifndef TERMS_QUAD_POLY
 #define TERMS_QUAD_POLY(N) (((N)*(N+1)/2)+N)
 #endif
@@ -29,7 +31,7 @@ extern  "C" {
 
 
 static inline
-void mpkc_pub_map_gf16( uint8_t * z , const uint8_t * pk_mat , const uint8_t * w )
+void mpkc_pub_map_gf16( uint8_t * z , kptr_t pk_mat , const uint8_t * w )
 {
 	uint8_t r[_PUB_M_BYTE]  = {0};
 	uint8_t tmp[_PUB_M_BYTE] ;
@@ -37,29 +39,30 @@ void mpkc_pub_map_gf16( uint8_t * z , const uint8_t * pk_mat , const uint8_t * w
 	uint8_t x[_PUB_N]  = {0};
 	for(unsigned i=0;i<n_var;i++) x[i] = gf16v_get_ele(w,i);
 
-	const uint8_t * linear_mat = pk_mat;
+	unsigned linear_offset = 0;
 	for(unsigned i=0;i<n_var;i++) {
-		gf16v_madd( r , linear_mat , x[i] , _PUB_M_BYTE );
-		linear_mat += _PUB_M_BYTE;
+		gf16v_madd( r , kptr_reify(pk_mat, linear_offset, _PUB_M_BYTE) , x[i] , _PUB_M_BYTE );
+		linear_offset += _PUB_M_BYTE;
 	}
 
-	const uint8_t * quad_mat = pk_mat + (_PUB_M_BYTE)*(_PUB_N);
+	unsigned quad_offset = (_PUB_M_BYTE)*(_PUB_N);
+	assert(linear_offset == quad_offset);
 	for(unsigned i=0;i<n_var;i++) {
 		memset( tmp , 0 , _PUB_M_BYTE );
 		for(unsigned j=0;j<=i;j++) {
-			gf16v_madd( tmp , quad_mat , x[j] , _PUB_M_BYTE );
-			quad_mat += _PUB_M_BYTE;
+			gf16v_madd( tmp , kptr_reify(pk_mat, quad_offset, _PUB_M_BYTE) , x[j] , _PUB_M_BYTE );
+			quad_offset += _PUB_M_BYTE;
 		}
 		gf16v_madd( r , tmp , x[i] , _PUB_M_BYTE );
 	}
-	gf256v_add( r , quad_mat , _PUB_M_BYTE );
+	gf256v_add( r , kptr_reify(pk_mat, quad_offset, _PUB_M_BYTE) , _PUB_M_BYTE );
 	memcpy( z , r , _PUB_M_BYTE );
 }
 
 
 
 static inline
-void mpkc_pub_map_gf16_n_m( uint8_t * z , const uint8_t * pk_mat , const uint8_t * w , unsigned n, unsigned m )
+void mpkc_pub_map_gf16_n_m( uint8_t * z , kptr_t pk_mat , const uint8_t * w , unsigned n, unsigned m )
 {
 	assert( n <= 256 );
 	assert( m <= 256 );
@@ -67,9 +70,10 @@ void mpkc_pub_map_gf16_n_m( uint8_t * z , const uint8_t * pk_mat , const uint8_t
 	unsigned m_byte = (m+1)/2;
 	uint8_t *r = z;
 	//memset(r,0,m_byte);
+	unsigned offset = 0;
 
-	gf16mat_prod( r , pk_mat , m_byte , n , w );
-	pk_mat += n*m_byte;
+	gf16mat_prod( r , kptr_reify(pk_mat, offset, n*m_byte) , m_byte , n , w );
+	offset += n*m_byte;
 
 	uint8_t _x[256] ;
 	gf16v_split( _x , w , n );
@@ -77,12 +81,12 @@ void mpkc_pub_map_gf16_n_m( uint8_t * z , const uint8_t * pk_mat , const uint8_t
 	for(unsigned i=0;i<n;i++) {
 		memset( tmp , 0 , m_byte );
 		for(unsigned j=0;j<=i;j++) {
-			gf16v_madd( tmp , pk_mat , _x[j] , m_byte );
-			pk_mat += m_byte;
+			gf16v_madd( tmp , kptr_reify(pk_mat, offset, m_byte) , _x[j] , m_byte );
+			offset += m_byte;
 		}
 		gf16v_madd( r , tmp , _x[i] , m_byte );
 	}
-	gf256v_add( r , pk_mat , m_byte );
+	gf256v_add( r , kptr_reify(pk_mat, offset, m_byte) , m_byte );
 }
 
 

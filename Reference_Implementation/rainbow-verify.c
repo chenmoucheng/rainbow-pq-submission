@@ -67,7 +67,8 @@ int main( int argc , char ** argv )
 		return -1;
 	}
 
-	r = crypto_sign_open( msg , &mlen , signature , mlen + CRYPTO_BYTES , pk );
+	uint8_t seed[_HASH_LEN] = {0};
+	r = crypto_sign_open( msg , &mlen , signature , mlen + CRYPTO_BYTES , kptr_wrap(seed, pk, CRYPTO_PUBLICKEYBYTES) );
 
 	free( msg );
 	free( signature );
