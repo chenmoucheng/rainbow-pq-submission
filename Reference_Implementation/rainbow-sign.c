@@ -67,8 +67,8 @@ int main( int argc , char ** argv )
 	}
 
 	unsigned long long smlen = 0;
-	uint8_t seed[_HASH_LEN] = {0};
-	r = crypto_sign( signature, &smlen, msg , mlen , kptr_wrap(seed, _sk, CRYPTO_SECRETKEYBYTES) );
+	uint8_t dontcare[_HASH_LEN] = {0};
+	r = crypto_sign( signature, &smlen, msg , mlen , kptr_init(_sk, CRYPTO_SECRETKEYBYTES, dontcare) );
 	if( 0 != r ) {
 		printf("sign() fail.\n");
 		return -1;

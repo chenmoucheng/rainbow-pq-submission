@@ -57,9 +57,10 @@ void rainbow_genkey( kptr_t pk , kptr_t sk )
 	rainbow_key_kptr _pk;
 	rainbow_key_kptr* _sk = kptr_manifest(sk, 0);
 
-	uint8_t seed[_HASH_LEN] = {0};
-	_pk. ckey = kptr_wrap(seed, 0, sizeof(rainbow_ckey));
-	_sk->ckey = kptr_wrap(seed, 0, sizeof(rainbow_ckey));
+	uint8_t seed[_HASH_LEN];
+	prng_bytes(seed, _HASH_LEN);
+	_pk. ckey = kptr_init(0, sizeof(rainbow_ckey), seed);
+	_sk->ckey = kptr_init(0, sizeof(rainbow_ckey), seed);
 
 	gf16mat_rand_inv( _pk.mat_t , kptr_manifest(sk, RAINBOWKEY_MAT_T) , _PUB_N );
 	gf16mat_rand_inv( _pk.mat_s , kptr_manifest(sk, RAINBOWKEY_MAT_S) , _PUB_M );
@@ -106,19 +107,19 @@ void transpose_l2( uint8_t * r , const uint8_t * a )
 }
 
 static inline
-void gen_l1_mat( uint8_t * mat , kptr_t l1_o , kptr_t l1_vo , const uint8_t * v ) {
-	for(unsigned i=0;i<_O1;i++) {
+void gen_l1_mat( uint8_t * mat , kptr_t l1_vo , kptr_t l1_o , const uint8_t * v ) {
+	for(unsigned i=0;i<_O1;i++)
 		gf16mat_prod( mat + i*_O1_BYTE , kptr_reify(l1_vo, i*_V1*_O1_BYTE, _V1*_O1_BYTE) , _O1_BYTE , _V1 , v );
+	for(unsigned i=0;i<_O1;i++)
 		gf256v_add( mat + i*_O1_BYTE , kptr_reify(l1_o, i*_O1_BYTE, _O1_BYTE) , _O1_BYTE );
-	}
 }
 
 static inline
-void gen_l2_mat( uint8_t * mat , kptr_t l2_o , kptr_t l2_vo , const uint8_t * v ) {
-	for(unsigned i=0;i<_O2;i++) {
+void gen_l2_mat( uint8_t * mat , kptr_t l2_vo , kptr_t l2_o , const uint8_t * v ) {
+	for(unsigned i=0;i<_O2;i++)
 		gf16mat_prod( mat + i*_O2_BYTE , kptr_reify(l2_vo, i*_V2*_O2_BYTE, _V2*_O2_BYTE) , _O2_BYTE , _V2 , v );
+	for(unsigned i=0;i<_O2;i++)
 		gf256v_add( mat + i*_O2_BYTE , kptr_reify(l2_o, i*_O2_BYTE, _O2_BYTE) , _O2_BYTE );
-	}
 }
 
 
@@ -134,7 +135,7 @@ return;
 	uint8_t mat1[_O2*_O2] ;
 	uint8_t temp[_O2_BYTE] ;
 
-	gen_l1_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L1_O) , kptr_slice(k, RAINBOWCKEY_L1_VO) , a );
+	gen_l1_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L1_VO) , kptr_slice(k, RAINBOWCKEY_L1_O) , a );
 
 	uint8_t mat2[_O2*_O2] ;
 	transpose_l1( mat2 , mat1 );
@@ -143,7 +144,7 @@ return;
 	mpkc_pub_map_gf16_n_m( temp , kptr_slice(k, RAINBOWCKEY_L1_VV) , a , _V1 , _O1 );
 	gf256v_add( r , temp , _O1_BYTE );
 
-	gen_l2_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L2_O), kptr_slice(k, RAINBOWCKEY_L2_VO) , a );
+	gen_l2_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L2_VO), kptr_slice(k, RAINBOWCKEY_L2_O) , a );
 
 	transpose_l2( mat2 , mat1 );
 	gf16mat_prod( r+_O1_BYTE , mat2 , _O2_BYTE , _O2 , a+_V2_BYTE );
@@ -193,6 +194,7 @@ unsigned linear_solver_l2( uint8_t * r , const uint8_t * mat_32x32 , const uint8
 int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 {
 	kptr_t k = *(kptr_t*)kptr_manifest(sk, RAINBOWKEY_CKEY);
+	kptr_reinit(&k);
 //// line 1 - 5
 	uint8_t mat_l1[_O1*_O1] ;
 	uint8_t mat_l2[_O2*_O2] ;
@@ -204,7 +206,7 @@ int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 	while( !l1_succ ) {
 		if( 512 == time ) break;
 		gf256v_rand( vinegar , _V1_BYTE );
-		gen_l1_mat( mat_l1 , kptr_slice(k, RAINBOWCKEY_L1_O) , kptr_slice(k, RAINBOWCKEY_L1_VO) , vinegar );
+		gen_l1_mat( mat_l1 , kptr_slice(k, RAINBOWCKEY_L1_VO) , kptr_slice(k, RAINBOWCKEY_L1_O) , vinegar );
 
 		l1_succ = linear_solver_l1( temp_o1 , mat_l1 , temp_o1 );
 		time ++;
@@ -236,7 +238,7 @@ int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 		gf256v_add( temp_o1 , y , _O1_BYTE );
 		linear_solver_l1( x + _V1_BYTE , mat_l1 , temp_o1 );
 
-		gen_l2_mat( mat_l2 , kptr_slice(k, RAINBOWCKEY_L2_O) , kptr_slice(k, RAINBOWCKEY_L2_VO) , x );
+		gen_l2_mat( mat_l2 , kptr_slice(k, RAINBOWCKEY_L2_VO) , kptr_slice(k, RAINBOWCKEY_L2_O) , x );
 		mpkc_pub_map_gf16_n_m( temp_o2 , kptr_slice(k, RAINBOWCKEY_L2_VV) , x , _V2 , _O2 );
 		gf256v_add( temp_o2 , y+_O1_BYTE , _O2_BYTE );
 		succ = linear_solver_l2( x + _V2_BYTE , mat_l2 , temp_o2 );  /// line 13
