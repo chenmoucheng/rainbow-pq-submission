@@ -92,7 +92,7 @@ void mpkc_pub_map_gf16_n_m( uint8_t * z , kptr_t pk_mat , const uint8_t * w , un
 
 
 static inline
-void mpkc_interpolate_gf16( uint8_t * poly , void (*quad_poly)(void *,const void *,const void *) , const void * key )
+void mpkc_interpolate_gf16( kptr_t poly , void (*quad_poly)(void *,void *,const void *) , void * key )
 {
 	uint8_t tmp[_PUB_N_BYTE] = {0};
 	uint8_t tmp_r0[_PUB_M_BYTE] = {0};
@@ -100,9 +100,10 @@ void mpkc_interpolate_gf16( uint8_t * poly , void (*quad_poly)(void *,const void
 	uint8_t tmp_r2[_PUB_M_BYTE] = {0};
 	const unsigned n_var = _PUB_N;
 
-	uint8_t * const_terms = poly + (TERMS_QUAD_POLY(_PUB_N)-1)*(_PUB_M_BYTE);
+	uint8_t const_terms[_PUB_M_BYTE];
 	gf256v_set_zero(tmp,_PUB_N_BYTE);
 	quad_poly( const_terms , key , tmp );
+	kptr_reify_lhs( poly , (TERMS_QUAD_POLY(_PUB_N)-1)*(_PUB_M_BYTE) , const_terms , _PUB_M_BYTE );
 
 	for(unsigned i=0;i<n_var;i++) {
 		gf256v_set_zero(tmp,_PUB_N_BYTE);
@@ -118,14 +119,14 @@ void mpkc_interpolate_gf16( uint8_t * poly , void (*quad_poly)(void *,const void
 
 		gf256v_add( tmp_r0 , tmp_r1 , _PUB_M_BYTE );     /// v
 		gf256v_add( tmp_r2 , tmp_r0 , _PUB_M_BYTE);   /// v^2
-		memcpy( poly + _PUB_M_BYTE*i , tmp_r0 , _PUB_M_BYTE );
-		memcpy( poly + _PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(i,i)) , tmp_r2 , _PUB_M_BYTE );
+		kptr_reify_lhs( poly , _PUB_M_BYTE*i , tmp_r0 , _PUB_M_BYTE );
+		kptr_reify_lhs( poly , _PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(i,i)) , tmp_r2 , _PUB_M_BYTE );
 	}
 
 	for(unsigned i=0;i<n_var;i++) {
 		unsigned base_idx = n_var+IDX_QTERMS_REVLEX(0,i);
-		memcpy( tmp_r1 , poly + _PUB_M_BYTE*i , _PUB_M_BYTE );
-		memcpy( tmp_r2 , poly + _PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(i,i)) , _PUB_M_BYTE );
+		memcpy( tmp_r1 , kptr_reify(poly , _PUB_M_BYTE*i , _PUB_M_BYTE ) , _PUB_M_BYTE );
+		memcpy( tmp_r2 , kptr_reify(poly , _PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(i,i)) , _PUB_M_BYTE ) , _PUB_M_BYTE );
 
 		for(unsigned j=0;j<i;j++) {
 			gf256v_set_zero(tmp,_PUB_N_BYTE);
@@ -137,10 +138,10 @@ void mpkc_interpolate_gf16( uint8_t * poly , void (*quad_poly)(void *,const void
 
 			gf256v_add( tmp_r0 , tmp_r1 , _PUB_M_BYTE );
 			gf256v_add( tmp_r0 , tmp_r2 , _PUB_M_BYTE );
-			gf256v_add( tmp_r0 , poly+_PUB_M_BYTE*j , _PUB_M_BYTE );
-			gf256v_add( tmp_r0 , poly+_PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(j,j)) , _PUB_M_BYTE );
+			gf256v_add( tmp_r0 , kptr_reify(poly,_PUB_M_BYTE*j,_PUB_M_BYTE) , _PUB_M_BYTE );
+			gf256v_add( tmp_r0 , kptr_reify(poly,_PUB_M_BYTE*(n_var+IDX_QTERMS_REVLEX(j,j)),_PUB_M_BYTE) , _PUB_M_BYTE );
 
-			memcpy( poly + _PUB_M_BYTE*(base_idx+j), tmp_r0 , _PUB_M_BYTE );
+			kptr_reify_lhs( poly , _PUB_M_BYTE*(base_idx+j), tmp_r0 , _PUB_M_BYTE );
 		}
 	}
 }

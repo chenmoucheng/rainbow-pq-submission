@@ -20,7 +20,7 @@
 
 static void rainbow_central_map( uint8_t * r , kptr_t k , const uint8_t * a );
 
-static void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , const uint8_t * w );
+static void rainbow_pubmap_seckey( uint8_t * z , rainbow_key_kptr * sk , const uint8_t * w );
 
 #endif
 
@@ -28,7 +28,7 @@ static void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , c
 #ifndef _DEBUG_RAINBOW_
 static
 #endif
-void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , const uint8_t * w ) {
+void rainbow_pubmap_seckey( uint8_t * z , rainbow_key_kptr * sk , const uint8_t * w ) {
 
 	uint8_t tt[_PUB_N_BYTE]  = {0};
 	uint8_t tt2[_PUB_N_BYTE]  = {0};
@@ -36,6 +36,7 @@ void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , const ui
 	gf16mat_prod( tt , sk->mat_t , _PUB_N_BYTE , _PUB_N , w );
 	gf256v_add( tt , sk->vec_t , _PUB_N_BYTE );
 
+	kptr_restart(&sk->ckey);
 	rainbow_central_map( tt2 , sk->ckey , tt );
 
 	gf16mat_prod( z , sk->mat_s , _PUB_M_BYTE , _PUB_M , tt2 );
@@ -46,8 +47,8 @@ void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , const ui
 
 
 static inline
-void rainbow_pubmap_wrapper( void * z, const void* pk_key, const void * w) {
-	rainbow_pubmap_seckey( (uint8_t *)z , (const rainbow_key_kptr *)pk_key, (const uint8_t *)w );
+void rainbow_pubmap_wrapper( void * z, void* pk_key, const void * w) {
+	rainbow_pubmap_seckey( (uint8_t *)z , (rainbow_key_kptr *)pk_key, (const uint8_t *)w );
 }
 
 
@@ -55,7 +56,7 @@ void rainbow_genkey( kptr_t pk , kptr_t sk )
 {
 
 	rainbow_key_kptr _pk;
-	rainbow_key_kptr* _sk = kptr_manifest(sk, 0);
+	rainbow_key_kptr* _sk = (rainbow_key_kptr*)kptr_manifest(sk, 0);
 
 	uint8_t seed[_HASH_LEN];
 	prng_bytes(seed, _HASH_LEN);
@@ -73,7 +74,7 @@ void rainbow_genkey( kptr_t pk , kptr_t sk )
 	memcpy( kptr_manifest(sk, RAINBOWKEY_VEC_S) , _pk.vec_s , _PUB_M_BYTE );
 	//gf16mat_prod( sk->vec_s , sk->mat_s , _PUB_M_BYTE , _PUB_M , pk->vec_s );
 
-	mpkc_interpolate_gf16( kptr_manifest(pk, 0) , rainbow_pubmap_wrapper , (const void*) &_pk );
+	mpkc_interpolate_gf16( pk , rainbow_pubmap_wrapper , (void*) &_pk );
 
 	kptr_deref_lhs(pk, _PUB_KEY_LEN-1, _SALT_BYTE);
 	kptr_deref_lhs(sk, _SEC_KEY_LEN-1, _SALT_BYTE);
@@ -107,19 +108,23 @@ void transpose_l2( uint8_t * r , const uint8_t * a )
 }
 
 static inline
-void gen_l1_mat( uint8_t * mat , kptr_t l1_vo , kptr_t l1_o , const uint8_t * v ) {
-	for(unsigned i=0;i<_O1;i++)
+void gen_l1_mat( uint8_t * mat , kptr_t l1_o , kptr_t l1_vo , const uint8_t * v ) {
+	uint8_t tmp[_O1*_O1_BYTE];
+	memcpy(tmp, kptr_reify(l1_o, 0, _O1*_O1_BYTE), _O1*_O1_BYTE);
+	for(unsigned i=0;i<_O1;i++) {
 		gf16mat_prod( mat + i*_O1_BYTE , kptr_reify(l1_vo, i*_V1*_O1_BYTE, _V1*_O1_BYTE) , _O1_BYTE , _V1 , v );
-	for(unsigned i=0;i<_O1;i++)
-		gf256v_add( mat + i*_O1_BYTE , kptr_reify(l1_o, i*_O1_BYTE, _O1_BYTE) , _O1_BYTE );
+		gf256v_add( mat + i*_O1_BYTE , tmp + i*_O1_BYTE , _O1_BYTE );
+	}
 }
 
 static inline
-void gen_l2_mat( uint8_t * mat , kptr_t l2_vo , kptr_t l2_o , const uint8_t * v ) {
-	for(unsigned i=0;i<_O2;i++)
+void gen_l2_mat( uint8_t * mat , kptr_t l2_o , kptr_t l2_vo , const uint8_t * v ) {
+	uint8_t tmp[_O2*_O2_BYTE];
+	memcpy(tmp, kptr_reify(l2_o, 0, _O2*_O2_BYTE), _O2*_O2_BYTE);
+	for(unsigned i=0;i<_O2;i++) {
 		gf16mat_prod( mat + i*_O2_BYTE , kptr_reify(l2_vo, i*_V2*_O2_BYTE, _V2*_O2_BYTE) , _O2_BYTE , _V2 , v );
-	for(unsigned i=0;i<_O2;i++)
-		gf256v_add( mat + i*_O2_BYTE , kptr_reify(l2_o, i*_O2_BYTE, _O2_BYTE) , _O2_BYTE );
+		gf256v_add( mat + i*_O2_BYTE , tmp + i*_O2_BYTE , _O2_BYTE );
+	}
 }
 
 
@@ -135,7 +140,7 @@ return;
 	uint8_t mat1[_O2*_O2] ;
 	uint8_t temp[_O2_BYTE] ;
 
-	gen_l1_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L1_VO) , kptr_slice(k, RAINBOWCKEY_L1_O) , a );
+	gen_l1_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L1_O) , kptr_slice(k, RAINBOWCKEY_L1_VO) , a );
 
 	uint8_t mat2[_O2*_O2] ;
 	transpose_l1( mat2 , mat1 );
@@ -144,7 +149,7 @@ return;
 	mpkc_pub_map_gf16_n_m( temp , kptr_slice(k, RAINBOWCKEY_L1_VV) , a , _V1 , _O1 );
 	gf256v_add( r , temp , _O1_BYTE );
 
-	gen_l2_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L2_VO), kptr_slice(k, RAINBOWCKEY_L2_O) , a );
+	gen_l2_mat( mat1 , kptr_slice(k, RAINBOWCKEY_L2_O), kptr_slice(k, RAINBOWCKEY_L2_VO) , a );
 
 	transpose_l2( mat2 , mat1 );
 	gf16mat_prod( r+_O1_BYTE , mat2 , _O2_BYTE , _O2 , a+_V2_BYTE );
@@ -203,12 +208,15 @@ int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 	uint8_t vinegar[_V1_BYTE] ;
 	unsigned l1_succ = 0;
 	unsigned time = 0;
+	prng_t snapshot = kptr_snapshot(k);
 	while( !l1_succ ) {
 		if( 512 == time ) break;
+		kptr_restore(&k, snapshot);
 		gf256v_rand( vinegar , _V1_BYTE );
-		gen_l1_mat( mat_l1 , kptr_slice(k, RAINBOWCKEY_L1_VO) , kptr_slice(k, RAINBOWCKEY_L1_O) , vinegar );
+		gen_l1_mat( mat_l1 , kptr_slice(k, RAINBOWCKEY_L1_O) , kptr_slice(k, RAINBOWCKEY_L1_VO) , vinegar );
 
 		l1_succ = linear_solver_l1( temp_o1 , mat_l1 , temp_o1 );
+		if (time == 0) l1_succ = 0;
 		time ++;
 	}
 	uint8_t temp_vv1[_O1_BYTE] ;
@@ -225,8 +233,11 @@ int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 
 	memcpy( x , vinegar , _V1_BYTE );
 	unsigned succ = 0;
+	snapshot = kptr_snapshot(k);
 	while( !succ ) {
 		if( 512 == time ) break;
+
+		kptr_restore(&k, snapshot);
 
 		gf256v_rand( salt , _SALT_BYTE );  /// line 8
 		sha2_chain_msg( _z , _PUB_M_BYTE , digest_salt , _HASH_LEN+_SALT_BYTE ); /// line 9
@@ -238,11 +249,12 @@ int rainbow_sign( uint8_t * signature , kptr_t sk , const uint8_t * _digest )
 		gf256v_add( temp_o1 , y , _O1_BYTE );
 		linear_solver_l1( x + _V1_BYTE , mat_l1 , temp_o1 );
 
-		gen_l2_mat( mat_l2 , kptr_slice(k, RAINBOWCKEY_L2_VO) , kptr_slice(k, RAINBOWCKEY_L2_O) , x );
+		gen_l2_mat( mat_l2 , kptr_slice(k, RAINBOWCKEY_L2_O) , kptr_slice(k, RAINBOWCKEY_L2_VO) , x );
 		mpkc_pub_map_gf16_n_m( temp_o2 , kptr_slice(k, RAINBOWCKEY_L2_VV) , x , _V2 , _O2 );
 		gf256v_add( temp_o2 , y+_O1_BYTE , _O2_BYTE );
 		succ = linear_solver_l2( x + _V2_BYTE , mat_l2 , temp_o2 );  /// line 13
 
+		if (time <= 2) l1_succ = 0;
 		time ++;
 	};
 	gf256v_add(x,kptr_reify(sk,RAINBOWKEY_VEC_T,sizeof(((rainbow_key*)0)->vec_t)),_PUB_N_BYTE);

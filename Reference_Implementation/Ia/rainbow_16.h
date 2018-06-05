@@ -18,23 +18,23 @@ extern  "C" {
 
 
 struct _rainbow_ckey {
-	uint8_t l1_vo[_O1][_V1*_O1_BYTE];
 	uint8_t l1_o[_O1*_O1_BYTE];
+	uint8_t l1_vo[_O1][_V1*_O1_BYTE];
 	uint8_t l1_vv[TERMS_QUAD_POLY(_V1)*_O1_BYTE];
 
-	uint8_t l2_vo[_O2][_V2*_O2_BYTE];
 	uint8_t l2_o[_O2*_O2_BYTE];
+	uint8_t l2_vo[_O2][_V2*_O2_BYTE];
 	uint8_t l2_vv[TERMS_QUAD_POLY(_V2)*_O2_BYTE];
 };
 
 typedef struct _rainbow_ckey rainbow_ckey;
 
-#define RAINBOWCKEY_L1_VO 0
-#define RAINBOWCKEY_L1_O  (RAINBOWCKEY_L1_VO + _O1*_V1*_O1_BYTE)
-#define RAINBOWCKEY_L1_VV (RAINBOWCKEY_L1_O  + _O1*_O1_BYTE)
-#define RAINBOWCKEY_L2_VO (RAINBOWCKEY_L1_VV + TERMS_QUAD_POLY(_V1)*_O1_BYTE)
-#define RAINBOWCKEY_L2_O  (RAINBOWCKEY_L2_VO + _O2*_V2*_O2_BYTE)
-#define RAINBOWCKEY_L2_VV (RAINBOWCKEY_L2_O  + _O2*_O2_BYTE)
+#define RAINBOWCKEY_L1_O  0
+#define RAINBOWCKEY_L1_VO (RAINBOWCKEY_L1_O  + _O1*_O1_BYTE)
+#define RAINBOWCKEY_L1_VV (RAINBOWCKEY_L1_VO + _O1*_V1*_O1_BYTE)
+#define RAINBOWCKEY_L2_O  (RAINBOWCKEY_L1_VV + TERMS_QUAD_POLY(_V1)*_O1_BYTE)
+#define RAINBOWCKEY_L2_VO (RAINBOWCKEY_L2_O  + _O2*_O2_BYTE)
+#define RAINBOWCKEY_L2_VV (RAINBOWCKEY_L2_VO + _O2*_V2*_O2_BYTE)
 
 struct _rainbow_key {
 	uint8_t mat_t[_PUB_N * _PUB_N_BYTE];
@@ -88,7 +88,7 @@ void rainbow_genkey( kptr_t pk , kptr_t sk );
 /// algorithm 1
 void rainbow_central_map( uint8_t * r , kptr_t k , const uint8_t * a );
 
-void rainbow_pubmap_seckey( uint8_t * z , const rainbow_key_kptr * sk , const uint8_t * w );
+void rainbow_pubmap_seckey( uint8_t * z , rainbow_key_kptr * sk , const uint8_t * w );
 
 #endif
 
